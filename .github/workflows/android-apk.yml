@@ -44,13 +44,33 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Prepare Keystore and Environment Files
+        run: |
+          # Recreate debug.keystore from base64 if it does not exist
+          if [ ! -f "debug.keystore" ] && [ -f "debug.keystore.base64" ]; then
+            echo "Restoring debug.keystore from debug.keystore.base64..."
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+          
+          # If debug.keystore is still missing, generate a standard debug keystore
+          if [ ! -f "debug.keystore" ]; then
+            echo "Generating fallback debug.keystore..."
+            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+          # Prepare .env from .env.example for Secrets Gradle Plugin
+          if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+            echo "Creating .env from .env.example..."
+            cp .env.example .env
+          fi
+
       - name: Clean Project
         run: ./gradlew clean --no-daemon
 
       - name: Build Debug APK
         id: gradle_build
         run: |
-          ./gradlew assembleDebug --stacktrace --no-daemon --scan-on-failure
+          ./gradlew assembleDebug --stacktrace --no-daemon --no-configuration-cache
 
       - name: Verify APK Generation & Diagnostics
         id: verify_apk
