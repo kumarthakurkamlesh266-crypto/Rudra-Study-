@@ -1,0 +1,6 @@
+{
+  "name": "Rudra OS",
+  "description": "Personal study operating system for Class 12 Science (BSEB/CBSE) with 1 GB Resource Vault, local PDF ingestion & AI analysis, Question & Pattern databases, grounded AI tutor & test generator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
