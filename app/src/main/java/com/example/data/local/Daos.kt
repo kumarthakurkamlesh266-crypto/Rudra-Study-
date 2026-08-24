@@ -31,21 +31,171 @@ interface TimelineDao {
 }
 
 @Dao
+interface SubjectDao {
+    @Query("SELECT * FROM syllabus_subjects ORDER BY orderIndex ASC")
+    fun getAllSubjects(): Flow<List<SubjectEntity>>
+
+    @Query("SELECT * FROM syllabus_subjects WHERE board = :board ORDER BY orderIndex ASC")
+    fun getSubjectsByBoard(board: String): Flow<List<SubjectEntity>>
+
+    @Query("SELECT * FROM syllabus_subjects WHERE subjectId = :subjectId LIMIT 1")
+    fun getSubjectById(subjectId: String): Flow<SubjectEntity?>
+
+    @Query("SELECT * FROM syllabus_subjects WHERE subjectName = :subjectName LIMIT 1")
+    suspend fun getSubjectByName(subjectName: String): SubjectEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSubjects(subjects: List<SubjectEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSubject(subject: SubjectEntity): Long
+
+    @Update
+    suspend fun updateSubject(subject: SubjectEntity)
+
+    @Query("DELETE FROM syllabus_subjects WHERE subjectId = :subjectId")
+    suspend fun deleteSubjectById(subjectId: String)
+
+    @Query("SELECT COUNT(*) FROM syllabus_subjects")
+    fun getSubjectsCount(): Flow<Int>
+}
+
+@Dao
+interface UnitDao {
+    @Query("SELECT * FROM syllabus_units ORDER BY orderIndex ASC, unitNumber ASC")
+    fun getAllUnits(): Flow<List<UnitEntity>>
+
+    @Query("SELECT * FROM syllabus_units WHERE subjectId = :subjectId ORDER BY orderIndex ASC, unitNumber ASC")
+    fun getUnitsBySubjectId(subjectId: String): Flow<List<UnitEntity>>
+
+    @Query("SELECT * FROM syllabus_units WHERE subjectName = :subjectName ORDER BY orderIndex ASC, unitNumber ASC")
+    fun getUnitsBySubjectName(subjectName: String): Flow<List<UnitEntity>>
+
+    @Query("SELECT * FROM syllabus_units WHERE board = :board AND subjectName = :subjectName ORDER BY orderIndex ASC, unitNumber ASC")
+    fun getUnitsByBoardAndSubject(board: String, subjectName: String): Flow<List<UnitEntity>>
+
+    @Query("SELECT * FROM syllabus_units WHERE unitId = :unitId LIMIT 1")
+    fun getUnitById(unitId: String): Flow<UnitEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUnits(units: List<UnitEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUnit(unit: UnitEntity): Long
+
+    @Update
+    suspend fun updateUnit(unit: UnitEntity)
+
+    @Query("DELETE FROM syllabus_units WHERE unitId = :unitId")
+    suspend fun deleteUnitById(unitId: String)
+
+    @Query("SELECT COUNT(*) FROM syllabus_units")
+    fun getUnitsCount(): Flow<Int>
+}
+
+@Dao
+interface SyllabusChapterDao {
+    @Query("SELECT * FROM syllabus_chapters ORDER BY orderIndex ASC, chapterNumber ASC")
+    fun getAllChapters(): Flow<List<SyllabusChapterEntity>>
+
+    @Query("SELECT * FROM syllabus_chapters WHERE unitId = :unitId ORDER BY orderIndex ASC, chapterNumber ASC")
+    fun getChaptersByUnitId(unitId: String): Flow<List<SyllabusChapterEntity>>
+
+    @Query("SELECT * FROM syllabus_chapters WHERE subjectId = :subjectId ORDER BY orderIndex ASC, chapterNumber ASC")
+    fun getChaptersBySubjectId(subjectId: String): Flow<List<SyllabusChapterEntity>>
+
+    @Query("SELECT * FROM syllabus_chapters WHERE subjectName = :subjectName ORDER BY orderIndex ASC, chapterNumber ASC")
+    fun getChaptersBySubject(subjectName: String): Flow<List<SyllabusChapterEntity>>
+
+    @Query("SELECT * FROM syllabus_chapters WHERE board = :board AND subjectName = :subjectName ORDER BY orderIndex ASC, chapterNumber ASC")
+    fun getChaptersByBoardAndSubject(board: String, subjectName: String): Flow<List<SyllabusChapterEntity>>
+
+    @Query("SELECT * FROM syllabus_chapters WHERE chapterId = :chapterId LIMIT 1")
+    fun getChapterById(chapterId: String): Flow<SyllabusChapterEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChapters(chapters: List<SyllabusChapterEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChapter(chapter: SyllabusChapterEntity): Long
+
+    @Update
+    suspend fun updateChapter(chapter: SyllabusChapterEntity)
+
+    @Query("DELETE FROM syllabus_chapters WHERE chapterId = :chapterId")
+    suspend fun deleteChapterById(chapterId: String)
+
+    @Query("SELECT COUNT(*) FROM syllabus_chapters")
+    fun getChaptersCount(): Flow<Int>
+}
+
+@Dao
+interface SyllabusHierarchyDao {
+    @Transaction
+    @Query("SELECT * FROM syllabus_chapters WHERE chapterId = :chapterId")
+    fun getChapterWithTopics(chapterId: String): Flow<ChapterWithTopics?>
+
+    @Transaction
+    @Query("SELECT * FROM syllabus_chapters WHERE unitId = :unitId ORDER BY orderIndex ASC, chapterNumber ASC")
+    fun getChaptersWithTopicsByUnit(unitId: String): Flow<List<ChapterWithTopics>>
+
+    @Transaction
+    @Query("SELECT * FROM syllabus_units WHERE unitId = :unitId")
+    fun getUnitWithChapters(unitId: String): Flow<UnitWithChapters?>
+
+    @Transaction
+    @Query("SELECT * FROM syllabus_units WHERE subjectId = :subjectId ORDER BY orderIndex ASC, unitNumber ASC")
+    fun getUnitsWithChaptersBySubject(subjectId: String): Flow<List<UnitWithChapters>>
+
+    @Transaction
+    @Query("SELECT * FROM syllabus_subjects WHERE subjectId = :subjectId")
+    fun getSubjectWithUnits(subjectId: String): Flow<SubjectWithUnits?>
+
+    @Transaction
+    @Query("SELECT * FROM syllabus_subjects WHERE board = :board ORDER BY orderIndex ASC")
+    fun getAllSubjectsWithUnits(board: String): Flow<List<SubjectWithUnits>>
+}
+
+@Dao
 interface TopicProgressDao {
-    @Query("SELECT * FROM topic_progress")
+    @Query("SELECT * FROM topic_progress ORDER BY orderIndex ASC")
     fun getAllProgress(): Flow<List<TopicProgressEntity>>
 
-    @Query("SELECT * FROM topic_progress WHERE board = :board AND subject = :subject")
+    @Query("SELECT * FROM topic_progress WHERE board = :board AND subject = :subject ORDER BY orderIndex ASC")
     fun getProgressBySubject(board: String, subject: String): Flow<List<TopicProgressEntity>>
+
+    @Query("SELECT * FROM topic_progress WHERE chapterId = :chapterId ORDER BY orderIndex ASC")
+    fun getTopicsByChapterId(chapterId: String): Flow<List<TopicProgressEntity>>
+
+    @Query("SELECT * FROM topic_progress WHERE unitId = :unitId ORDER BY orderIndex ASC")
+    fun getTopicsByUnitId(unitId: String): Flow<List<TopicProgressEntity>>
+
+    @Query("SELECT * FROM topic_progress WHERE subjectId = :subjectId ORDER BY orderIndex ASC")
+    fun getTopicsBySubjectId(subjectId: String): Flow<List<TopicProgressEntity>>
+
+    @Query("SELECT * FROM topic_progress WHERE subject = :subject AND chapterName = :chapterName ORDER BY orderIndex ASC")
+    fun getTopicsBySubjectAndChapter(subject: String, chapterName: String): Flow<List<TopicProgressEntity>>
 
     @Query("SELECT * FROM topic_progress WHERE topicId = :topicId LIMIT 1")
     suspend fun getTopicById(topicId: String): TopicProgressEntity?
 
+    @Query("SELECT * FROM topic_progress WHERE topicId = :topicId LIMIT 1")
+    fun getTopicByIdFlow(topicId: String): Flow<TopicProgressEntity?>
+
     @Query("SELECT * FROM topic_progress WHERE isWeakTopic = 1")
     fun getWeakTopics(): Flow<List<TopicProgressEntity>>
 
+    @Query("SELECT * FROM topic_progress WHERE status = :status ORDER BY orderIndex ASC")
+    fun getTopicsByStatus(status: String): Flow<List<TopicProgressEntity>>
+
+    @Query("SELECT * FROM topic_progress WHERE topicName LIKE '%' || :query || '%' OR chapterName LIKE '%' || :query || '%' OR unitName LIKE '%' || :query || '%' OR subject LIKE '%' || :query || '%'")
+    fun searchTopics(query: String): Flow<List<TopicProgressEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTopics(topics: List<TopicProgressEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTopic(topic: TopicProgressEntity)
 
     @Update
     suspend fun updateTopic(topic: TopicProgressEntity)
@@ -61,6 +211,12 @@ interface TopicProgressDao {
 
     @Query("UPDATE topic_progress SET isWeakTopic = :isWeak WHERE topicId = :topicId")
     suspend fun toggleWeakTopic(topicId: String, isWeak: Boolean)
+
+    @Query("SELECT COUNT(*) FROM topic_progress")
+    fun getTotalTopicsCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM topic_progress WHERE status = 'COMPLETED' OR status = 'MASTERED'")
+    fun getCompletedTopicsCount(): Flow<Int>
 }
 
 @Dao

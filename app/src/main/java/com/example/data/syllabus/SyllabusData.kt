@@ -1,6 +1,9 @@
 package com.example.data.syllabus
 
+import com.example.data.local.SubjectEntity
+import com.example.data.local.SyllabusChapterEntity
 import com.example.data.local.TopicProgressEntity
+import com.example.data.local.UnitEntity
 
 data class SyllabusTopicModel(
     val id: String,
@@ -42,11 +45,17 @@ object SyllabusData {
             val safeChap = chapter.filter { it.isLetterOrDigit() }.take(6)
             val safeTopic = topic.filter { it.isLetterOrDigit() }.take(8)
             val id = "${board}_${safeSub}_${safeUnit}_${safeChap}_${safeTopic}_$counter"
-            counter++
+
+            val subjectId = "${board}_${subject.filter { it.isLetterOrDigit() }}"
+            val unitId = "${subjectId}_${unit.filter { it.isLetterOrDigit() }}"
+            val chapterId = "${unitId}_${chapter.filter { it.isLetterOrDigit() }}"
 
             list.add(
                 TopicProgressEntity(
                     topicId = id,
+                    chapterId = chapterId,
+                    unitId = unitId,
+                    subjectId = subjectId,
                     board = board,
                     subject = subject,
                     unitName = unit,
@@ -57,9 +66,11 @@ object SyllabusData {
                     completionPercent = 0,
                     revisionCount = 0,
                     lastRevisedTimestamp = 0L,
-                    isWeakTopic = false
+                    isWeakTopic = false,
+                    orderIndex = counter
                 )
             )
+            counter++
         }
 
         // =========================================================================
@@ -501,4 +512,100 @@ object SyllabusData {
 
     fun getSubjects(): List<String> = listOf("Physics", "Chemistry", "Biology", "Hindi", "English")
     fun getPcbSubjects(): List<String> = listOf("Physics", "Chemistry", "Biology")
+
+    fun getSyllabusSubjects(board: String = "BSEB"): List<SubjectEntity> {
+        val topics = getDefaultSyllabus(board)
+        val subjectOrder = listOf("Physics", "Chemistry", "Biology", "Hindi", "English")
+        val colorMap = mapOf(
+            "Physics" to "#06B6D4",
+            "Chemistry" to "#10B981",
+            "Biology" to "#F59E0B",
+            "Hindi" to "#EC4899",
+            "English" to "#3B82F6"
+        )
+
+        return topics.groupBy { it.subject }.map { (subjectName, subTopics) ->
+            val unitsCount = subTopics.map { it.unitName }.distinct().size
+            val chaptersCount = subTopics.map { it.chapterName }.distinct().size
+            val orderIdx = subjectOrder.indexOf(subjectName).let { if (it >= 0) it else 99 }
+            SubjectEntity(
+                subjectId = "${board}_${subjectName.filter { it.isLetterOrDigit() }}",
+                board = board,
+                subjectName = subjectName,
+                totalUnitsCount = unitsCount,
+                totalChaptersCount = chaptersCount,
+                totalTopicsCount = subTopics.size,
+                orderIndex = orderIdx,
+                primaryColorHex = colorMap[subjectName] ?: "#6366F1"
+            )
+        }.sortedBy { it.orderIndex }
+    }
+
+    fun getSyllabusUnits(board: String = "BSEB"): List<UnitEntity> {
+        val topics = getDefaultSyllabus(board)
+        val unitsList = mutableListOf<UnitEntity>()
+        var unitCounter = 1
+
+        topics.groupBy { it.subject to it.unitName }.forEach { (key, unitTopics) ->
+            val (subject, unitName) = key
+            val subjectId = "${board}_${subject.filter { it.isLetterOrDigit() }}"
+            val unitId = "${subjectId}_${unitName.filter { it.isLetterOrDigit() }}"
+            val chaptersCount = unitTopics.map { it.chapterName }.distinct().size
+
+            // Try parsing unit number from string e.g. "Unit 1: Electrostatics" -> 1
+            val unitNum = Regex("""\d+""").find(unitName)?.value?.toIntOrNull() ?: unitCounter
+
+            unitsList.add(
+                UnitEntity(
+                    unitId = unitId,
+                    subjectId = subjectId,
+                    board = board,
+                    subjectName = subject,
+                    unitNumber = unitNum,
+                    unitName = unitName,
+                    weightageMarks = 8,
+                    totalChaptersCount = chaptersCount,
+                    totalTopicsCount = unitTopics.size,
+                    orderIndex = unitCounter
+                )
+            )
+            unitCounter++
+        }
+        return unitsList
+    }
+
+    fun getSyllabusChapters(board: String = "BSEB"): List<SyllabusChapterEntity> {
+        val topics = getDefaultSyllabus(board)
+        val chaptersList = mutableListOf<SyllabusChapterEntity>()
+        var chapterCounter = 1
+
+        topics.groupBy { Triple(it.subject, it.unitName, it.chapterName) }.forEach { (key, chapTopics) ->
+            val (subject, unitName, chapterName) = key
+            val subjectId = "${board}_${subject.filter { it.isLetterOrDigit() }}"
+            val unitId = "${subjectId}_${unitName.filter { it.isLetterOrDigit() }}"
+            val chapterId = "${unitId}_${chapterName.filter { it.isLetterOrDigit() }}"
+
+            val isHighYield = chapTopics.any { it.difficulty.equals("Advanced", ignoreCase = true) }
+
+            chaptersList.add(
+                SyllabusChapterEntity(
+                    chapterId = chapterId,
+                    unitId = unitId,
+                    subjectId = subjectId,
+                    board = board,
+                    subjectName = subject,
+                    unitName = unitName,
+                    chapterNumber = chapterCounter,
+                    chapterName = chapterName,
+                    weightageMarks = 8,
+                    weightagePercentage = 10f,
+                    totalTopicsCount = chapTopics.size,
+                    isHighYield = isHighYield,
+                    orderIndex = chapterCounter
+                )
+            )
+            chapterCounter++
+        }
+        return chaptersList
+    }
 }

@@ -8,6 +8,9 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [
         TimelineBlockEntity::class,
+        SubjectEntity::class,
+        UnitEntity::class,
+        SyllabusChapterEntity::class,
         TopicProgressEntity::class,
         RevisionTaskEntity::class,
         DailyScorecardEntity::class,
@@ -22,11 +25,15 @@ import androidx.room.RoomDatabase
         TestAttemptEntity::class,
         AiChatMessageEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class RudraDatabase : RoomDatabase() {
     abstract fun timelineDao(): TimelineDao
+    abstract fun subjectDao(): SubjectDao
+    abstract fun unitDao(): UnitDao
+    abstract fun syllabusChapterDao(): SyllabusChapterDao
+    abstract fun syllabusHierarchyDao(): SyllabusHierarchyDao
     abstract fun topicProgressDao(): TopicProgressDao
     abstract fun revisionTaskDao(): RevisionTaskDao
     abstract fun scorecardDao(): ScorecardDao

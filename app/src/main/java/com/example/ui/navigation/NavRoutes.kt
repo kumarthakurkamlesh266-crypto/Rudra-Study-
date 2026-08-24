@@ -15,6 +15,9 @@ enum class NavItem(
     DASHBOARD("dashboard", "Dashboard", "System Core", Icons.Default.Dashboard),
     STUDY("study", "Study Focus", "System Core", Icons.Default.Timer),
     TIMELINE("timeline", "Timeline & Routine", "System Core", Icons.Default.Schedule),
+
+    // Academic
+    SYLLABUS("syllabus", "Syllabus", "Academic", Icons.Default.MenuBook),
     PLANNER("planner", "Weekly Planner", "Academic", Icons.Default.CalendarMonth),
     REVISION("revision", "Revision System", "Academic", Icons.Default.Repeat),
     TESTS("tests", "Tests & Papers", "Academic", Icons.Default.Assignment),

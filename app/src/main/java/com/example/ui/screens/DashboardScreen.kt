@@ -108,7 +108,10 @@ fun DashboardScreen(
                         subtitle = "Total: ${syllabusSummary.totalTopicsCount}",
                         icon = Icons.Default.MenuBook,
                         iconColor = RudraAmber,
-                        modifier = Modifier.weight(1f).testTag("stat_topics_done")
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onNavigate(NavItem.SYLLABUS) }
+                            .testTag("stat_topics_done")
                     )
                 }
             }

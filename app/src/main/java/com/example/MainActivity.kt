@@ -76,6 +76,11 @@ fun RudraAppContent(viewModel: RudraViewModel) {
                     viewModel = viewModel,
                     onOpenDrawer = { coroutineScope.launch { drawerState.open() } }
                 )
+                NavItem.SYLLABUS.route -> SyllabusScreen(
+                    viewModel = viewModel,
+                    onOpenDrawer = { coroutineScope.launch { drawerState.open() } },
+                    onNavigate = { navigateTo(it) }
+                )
                 NavItem.PLANNER.route -> PlannerScreen(
                     viewModel = viewModel,
                     onOpenDrawer = { coroutineScope.launch { drawerState.open() } }

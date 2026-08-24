@@ -20,22 +20,130 @@ data class TimelineBlockEntity(
     val isCompletedToday: Boolean = false
 )
 
-@Entity(tableName = "topic_progress")
+@Entity(
+    tableName = "syllabus_subjects",
+    indices = [
+        androidx.room.Index(value = ["board", "subjectName"])
+    ]
+)
+data class SubjectEntity(
+    @PrimaryKey
+    val subjectId: String, // e.g. "BSEB_Physics", "BSEB_Chemistry", "BSEB_Biology"
+    val board: String = "BSEB",
+    val subjectName: String, // "Physics", "Chemistry", "Biology", "Mathematics", "Hindi", "English"
+    val totalUnitsCount: Int = 0,
+    val totalChaptersCount: Int = 0,
+    val totalTopicsCount: Int = 0,
+    val orderIndex: Int = 0,
+    val iconName: String = "",
+    val primaryColorHex: String = ""
+)
+
+@Entity(
+    tableName = "syllabus_units",
+    indices = [
+        androidx.room.Index(value = ["subjectId"]),
+        androidx.room.Index(value = ["board", "subjectName"]),
+        androidx.room.Index(value = ["unitName"])
+    ]
+)
+data class UnitEntity(
+    @PrimaryKey
+    val unitId: String, // e.g. "BSEB_PHY_U01"
+    val subjectId: String, // e.g. "BSEB_Physics"
+    val board: String = "BSEB",
+    val subjectName: String,
+    val unitNumber: Int = 1,
+    val unitName: String, // e.g. "Unit 1: Electrostatics"
+    val weightageMarks: Int = 0,
+    val totalChaptersCount: Int = 0,
+    val totalTopicsCount: Int = 0,
+    val orderIndex: Int = 0
+)
+
+@Entity(
+    tableName = "syllabus_chapters",
+    indices = [
+        androidx.room.Index(value = ["unitId"]),
+        androidx.room.Index(value = ["subjectId"]),
+        androidx.room.Index(value = ["subjectName", "chapterName"]),
+        androidx.room.Index(value = ["board", "subjectName"])
+    ]
+)
+data class SyllabusChapterEntity(
+    @PrimaryKey
+    val chapterId: String, // e.g. "BSEB_PHY_U01_CH01"
+    val unitId: String,    // e.g. "BSEB_PHY_U01"
+    val subjectId: String, // e.g. "BSEB_Physics"
+    val board: String = "BSEB",
+    val subjectName: String,
+    val unitName: String,
+    val chapterNumber: Int = 1,
+    val chapterName: String,
+    val weightageMarks: Int = 8,
+    val weightagePercentage: Float = 10.0f,
+    val totalTopicsCount: Int = 0,
+    val isHighYield: Boolean = false,
+    val orderIndex: Int = 0
+)
+
+@Entity(
+    tableName = "topic_progress",
+    indices = [
+        androidx.room.Index(value = ["subject", "chapterName"]),
+        androidx.room.Index(value = ["board", "subject"]),
+        androidx.room.Index(value = ["chapterId"]),
+        androidx.room.Index(value = ["unitId"]),
+        androidx.room.Index(value = ["status"])
+    ]
+)
 data class TopicProgressEntity(
     @PrimaryKey
     val topicId: String, // "BSEB_PHY_U1_CH1_TOPIC1"
-    val board: String,   // "BSEB", "CBSE"
+    val chapterId: String = "",
+    val unitId: String = "",
+    val subjectId: String = "",
+    val board: String = "BSEB",   // "BSEB", "CBSE"
     val subject: String, // "Physics", "Chemistry", "Biology", "Hindi", "English"
     val unitName: String,
     val chapterName: String,
     val topicName: String,
     val difficulty: String = "Medium", // "Beginner", "Medium", "Advanced"
-    val status: String = "NOT_STARTED", // "NOT_STARTED", "LEARNING", "PRACTICING", "REVISED", "MASTERED"
+    val status: String = "NOT_STARTED", // "NOT_STARTED", "LEARNING", "PRACTICING", "REVISED", "COMPLETED", "MASTERED"
     val completionPercent: Int = 0,
     val revisionCount: Int = 0,
     val lastRevisedTimestamp: Long = 0L,
     val isWeakTopic: Boolean = false,
-    val notes: String = ""
+    val notes: String = "",
+    val orderIndex: Int = 0
+)
+
+// Hierarchical Syllabus Room Relations
+data class ChapterWithTopics(
+    @androidx.room.Embedded val chapter: SyllabusChapterEntity,
+    @androidx.room.Relation(
+        parentColumn = "chapterId",
+        entityColumn = "chapterId"
+    )
+    val topics: List<TopicProgressEntity>
+)
+
+data class UnitWithChapters(
+    @androidx.room.Embedded val unit: UnitEntity,
+    @androidx.room.Relation(
+        parentColumn = "unitId",
+        entityColumn = "unitId"
+    )
+    val chapters: List<SyllabusChapterEntity>
+)
+
+data class SubjectWithUnits(
+    @androidx.room.Embedded val subject: SubjectEntity,
+    @androidx.room.Relation(
+        parentColumn = "subjectId",
+        entityColumn = "subjectId"
+    )
+    val units: List<UnitEntity>
 )
 
 @Entity(tableName = "revision_tasks")

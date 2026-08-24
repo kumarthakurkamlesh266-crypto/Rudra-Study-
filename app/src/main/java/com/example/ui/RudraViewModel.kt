@@ -78,6 +78,9 @@ class RudraViewModel(application: Application) : AndroidViewModel(application) {
 
     // Observables
     val timelineBlocks = repository.allTimelineBlocks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allSubjects = repository.allSubjects.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allUnits = repository.allUnits.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allSyllabusChapters = repository.allSyllabusChapters.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val allTopics = repository.allTopicProgress.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val pendingRevisions = repository.pendingRevisionTasks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val allRevisions = repository.allRevisionTasks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -176,6 +179,11 @@ class RudraViewModel(application: Application) : AndroidViewModel(application) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SyllabusProgressSummary(0, emptyMap(), 0, 0, 0, 0, 0))
 
+    // Syllabus Interactive States
+    val selectedSyllabusSubjects = MutableStateFlow<Set<String>>(setOf("Physics"))
+    val syllabusSearchQuery = MutableStateFlow("")
+    val syllabusStatusFilter = MutableStateFlow("ALL") // "ALL", "NOT_STARTED", "LEARNING", "COMPLETED"
+
     // AI Tutor States & Chat Persistence
     val aiChatMessages = repository.allAiMessages.stateIn(
         viewModelScope,
@@ -255,6 +263,45 @@ class RudraViewModel(application: Application) : AndroidViewModel(application) {
     fun resetTimeline() {
         viewModelScope.launch {
             repository.resetTimelineToDefault()
+        }
+    }
+
+    // Syllabus Actions & Interactive State
+    fun toggleSyllabusSubject(subject: String) {
+        val current = selectedSyllabusSubjects.value.toMutableSet()
+        if (current.contains(subject)) {
+            if (current.size > 1) {
+                current.remove(subject)
+            }
+        } else {
+            current.add(subject)
+        }
+        selectedSyllabusSubjects.value = current
+    }
+
+    fun selectSingleSyllabusSubject(subject: String) {
+        selectedSyllabusSubjects.value = setOf(subject)
+    }
+
+    fun selectAllPcbSyllabus() {
+        selectedSyllabusSubjects.value = setOf("Physics", "Chemistry", "Biology")
+    }
+
+    fun selectAllSyllabusSubjects() {
+        selectedSyllabusSubjects.value = setOf("Physics", "Chemistry", "Biology", "Hindi", "English")
+    }
+
+    fun setSyllabusSearch(query: String) {
+        syllabusSearchQuery.value = query
+    }
+
+    fun setSyllabusFilter(filter: String) {
+        syllabusStatusFilter.value = filter
+    }
+
+    fun startChapterRevision(subject: String, chapterName: String) {
+        viewModelScope.launch {
+            repository.startChapterRevision(subject, chapterName)
         }
     }
 

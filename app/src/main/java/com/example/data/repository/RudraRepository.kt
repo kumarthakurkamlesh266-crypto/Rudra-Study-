@@ -12,6 +12,7 @@ import com.example.data.vault.PdfVaultManager
 import com.example.data.vault.PreloadedVaultData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
@@ -21,6 +22,10 @@ class RudraRepository(
     private val context: Context
 ) {
     private val timelineDao = database.timelineDao()
+    private val subjectDao = database.subjectDao()
+    private val unitDao = database.unitDao()
+    private val syllabusChapterDao = database.syllabusChapterDao()
+    private val syllabusHierarchyDao = database.syllabusHierarchyDao()
     private val topicDao = database.topicProgressDao()
     private val revisionDao = database.revisionTaskDao()
     private val scorecardDao = database.scorecardDao()
@@ -36,6 +41,9 @@ class RudraRepository(
     private val aiChatDao = database.aiChatDao()
 
     val allTimelineBlocks: Flow<List<TimelineBlockEntity>> = timelineDao.getAllBlocks()
+    val allSubjects: Flow<List<SubjectEntity>> = subjectDao.getAllSubjects()
+    val allUnits: Flow<List<UnitEntity>> = unitDao.getAllUnits()
+    val allSyllabusChapters: Flow<List<SyllabusChapterEntity>> = syllabusChapterDao.getAllChapters()
     val allTopicProgress: Flow<List<TopicProgressEntity>> = topicDao.getAllProgress()
     val pendingRevisionTasks: Flow<List<RevisionTaskEntity>> = revisionDao.getPendingTasks()
     val allRevisionTasks: Flow<List<RevisionTaskEntity>> = revisionDao.getAllTasks()
@@ -48,6 +56,15 @@ class RudraRepository(
     val latestTestAttempt: Flow<TestAttemptEntity?> = testAttemptDao.getLatestAttempt()
     val allPdfs: Flow<List<PdfDocumentEntity>> = pdfDao.getAllPdfs()
     val weakTopics: Flow<List<TopicProgressEntity>> = topicDao.getWeakTopics()
+
+    // Hierarchical Syllabus Queries
+    fun getSubjectsWithUnits(board: String = "BSEB"): Flow<List<SubjectWithUnits>> = syllabusHierarchyDao.getAllSubjectsWithUnits(board)
+    fun getUnitsWithChaptersBySubject(subjectId: String): Flow<List<UnitWithChapters>> = syllabusHierarchyDao.getUnitsWithChaptersBySubject(subjectId)
+    fun getChaptersWithTopicsByUnit(unitId: String): Flow<List<ChapterWithTopics>> = syllabusHierarchyDao.getChaptersWithTopicsByUnit(unitId)
+    fun getChapterWithTopics(chapterId: String): Flow<ChapterWithTopics?> = syllabusHierarchyDao.getChapterWithTopics(chapterId)
+    fun getTopicsByChapter(chapterId: String): Flow<List<TopicProgressEntity>> = topicDao.getTopicsByChapterId(chapterId)
+    fun getUnitsBySubjectName(subjectName: String): Flow<List<UnitEntity>> = unitDao.getUnitsBySubjectName(subjectName)
+    fun getSyllabusChaptersBySubject(subjectName: String): Flow<List<SyllabusChapterEntity>> = syllabusChapterDao.getChaptersBySubject(subjectName)
 
     // Resource Vault & Question/Chapter/Pattern Databases
     val allVaultDocuments: Flow<List<VaultDocumentEntity>> = vaultDocDao.getAllDocuments()
@@ -65,6 +82,16 @@ class RudraRepository(
         if (existingBlocks.isEmpty()) {
             timelineDao.insertBlocks(DefaultTimelineData.getMasterTimeline())
         }
+
+        // Seed Hierarchical Syllabus Entities (Subjects, Units, Chapters, Topics)
+        val defaultSubjects = SyllabusData.getSyllabusSubjects(board)
+        subjectDao.insertSubjects(defaultSubjects)
+
+        val defaultUnits = SyllabusData.getSyllabusUnits(board)
+        unitDao.insertUnits(defaultUnits)
+
+        val defaultChapters = SyllabusData.getSyllabusChapters(board)
+        syllabusChapterDao.insertChapters(defaultChapters)
 
         val defaultTopics = SyllabusData.getDefaultSyllabus(board)
         topicDao.insertTopics(defaultTopics)
@@ -218,6 +245,26 @@ class RudraRepository(
         topicDao.markChapterStatus(subject, chapterName, "COMPLETED", 100)
     }
 
+    suspend fun startChapterRevision(subject: String, chapterName: String) = withContext(Dispatchers.IO) {
+        val topics = topicDao.getAllProgress().firstOrNull()?.filter {
+            it.subject.equals(subject, ignoreCase = true) && it.chapterName.equals(chapterName, ignoreCase = true)
+        } ?: emptyList()
+        val now = System.currentTimeMillis()
+        val tasks = topics.map { topic ->
+            RevisionTaskEntity(
+                topicId = topic.topicId,
+                topicName = topic.topicName,
+                subject = topic.subject,
+                chapterName = topic.chapterName,
+                intervalType = "PLUS_1",
+                dueDateTimestamp = now + 86400000L
+            )
+        }
+        if (tasks.isNotEmpty()) {
+            revisionDao.insertTasks(tasks)
+        }
+    }
+
     suspend fun markChapterStatus(subject: String, chapterName: String, status: String) = withContext(Dispatchers.IO) {
         val completion = when (status) {
             "COMPLETED", "MASTERED" -> 100
@@ -225,6 +272,19 @@ class RudraRepository(
             else -> 0
         }
         topicDao.markChapterStatus(subject, chapterName, status, completion)
+    }
+
+    // Hierarchy CRUD methods
+    suspend fun insertSubject(subject: SubjectEntity) = withContext(Dispatchers.IO) {
+        subjectDao.insertSubject(subject)
+    }
+
+    suspend fun insertUnit(unit: UnitEntity) = withContext(Dispatchers.IO) {
+        unitDao.insertUnit(unit)
+    }
+
+    suspend fun insertSyllabusChapter(chapter: SyllabusChapterEntity) = withContext(Dispatchers.IO) {
+        syllabusChapterDao.insertChapter(chapter)
     }
 
     suspend fun completeRevisionTask(taskId: Long, topicId: String) = withContext(Dispatchers.IO) {
